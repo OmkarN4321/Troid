@@ -1,12 +1,14 @@
-//Server initiation
+const wsPlugin = require("./plugins/wsPlugin");
+const redisPlugin = require("./plugins/redisPlugin");
+
 const fastify = require("fastify")({ logger: true });
 
-//Plugin registration
-fastify.register(require("fastify-socket.io"));
-fastify.register(require("./handler"));
+const init = () => {
+  wsPlugin(fastify);
+  redisPlugin(fastify);
+};
 
-//Listening to requests
-const start = async () => {
+const fire = async () => {
   try {
     await fastify.listen({ port: 5000 });
   } catch (error) {
@@ -15,4 +17,5 @@ const start = async () => {
   }
 };
 
-start();
+init();
+fire();
