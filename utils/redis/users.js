@@ -1,33 +1,39 @@
-const createUser = async (redis, socketID, userName, roomName) => {
-  const status = await redis.setnx(
-    socketID,
-    JSON.stringify({
-      userName,
-      roomName,
-    })
-  );
+const createUser = async (fastify, socketId, userName, roomName) => {
+	const { redis } = fastify;
 
-  if (status === 1) {
-    return { status, message: "User created" };
-  } else {
-    return { status, message: "User exists" };
-  }
+	const status = await redis.setnx(
+		socketId,
+		JSON.stringify({
+			userName,
+			roomName
+		})
+	);
+
+	if (status === 1) {
+		return { status, message: 'User created' };
+	} else {
+		return { status, message: 'User exists' };
+	}
 };
 
-const getUser = async (redis, socketID) => {
-  const user = await redis.get(socketID);
+const getUser = async (fastify, socketID) => {
+	const { redis } = fastify;
 
-  return JSON.parse(user);
+	const user = await redis.get(socketID);
+
+	return JSON.parse(user);
 };
 
-const deleteUser = async (redis, socketID) => {
-  const status = await redis.del(socketID);
+const deleteUser = async (fastify, socketID) => {
+	const { redis } = fastify;
 
-  if (status === 1) {
-    return { status, message: "User deleted" };
-  } else {
-    return { status, message: "User doesn't exist" };
-  }
+	const status = await redis.del(socketID);
+
+	if (status === 1) {
+		return { status, message: 'User deleted' };
+	} else {
+		return { status, message: "User doesn't exist" };
+	}
 };
 
 module.exports = { createUser, getUser, deleteUser };
