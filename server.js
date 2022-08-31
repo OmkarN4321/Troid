@@ -62,9 +62,22 @@ const game = () => {
 					await roomEmit(fastify, socket.id, 'gameOff');
 					await deleteRoom(fastify, user.roomName);
 
-					basicEmit(fastify, socket.id, 'success', { message });
+					basicEmit(fastify, socket.id, 'success', { message: 'User left the room' });
 				} else {
-					basicEmit(fastify, socket.id, 'failure', { message });
+					basicEmit(fastify, socket.id, 'failure', { message: "User doesn't exist" });
+				}
+			});
+
+			socket.on('disconnect', async (reason) => {
+				const user = await getUser(fastify, socket.id);
+
+				if (user) {
+					await roomEmit(fastify, socket.id, 'gameOff');
+					await deleteRoom(fastify, user.roomName);
+
+					basicEmit(fastify, socket.id, 'success', { message: 'User left the room' });
+				} else {
+					basicEmit(fastify, socket.id, 'failure', { message: "User doesn't exist" });
 				}
 			});
 		});
