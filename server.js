@@ -9,8 +9,6 @@ const { roomEmit, basicEmit } = require("./utils/socketIO/emits");
 const socketIOPlugin = require("./plugins/socketIOPlugin");
 const redisPlugin = require("./plugins/redisPlugin");
 const { setTimeout } = require("timers");
-const path = require("path");
-const fs = require("fs");
 
 const fastify = require("fastify")({ logger: true });
 
@@ -100,14 +98,6 @@ const game = () => {
 		});
 	});
 };
-
-fastify.get("*", {}, (req, reply) => {
-	const stream = fs.createReadStream(
-		path.join(__dirname, "client", "index.html")
-	);
-
-	reply.type("text/html").send(stream);
-});
 
 init();
 game();
