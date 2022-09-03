@@ -1,7 +1,5 @@
 const createUser = async (fastify, socketId, userName, roomName) => {
-	const { redis } = fastify;
-
-	const status = await redis.setnx(
+	const status = await fastify.redis.setnx(
 		socketId,
 		JSON.stringify({
 			userName,
@@ -17,17 +15,13 @@ const createUser = async (fastify, socketId, userName, roomName) => {
 };
 
 const getUser = async (fastify, socketID) => {
-	const { redis } = fastify;
-
-	const user = await redis.get(socketID);
+	const user = await fastify.redis.get(socketID);
 
 	return JSON.parse(user);
 };
 
 const deleteUser = async (fastify, socketID) => {
-	const { redis } = fastify;
-
-	const status = await redis.del(socketID);
+	const status = await fastify.redis.del(socketID);
 
 	if (status === 1) {
 		return { status, message: 'User deleted' };

@@ -1,13 +1,18 @@
-const { createRoom, getRoom, updateRoom, deleteRoom } = require('./utils/redis/rooms');
-const { createUser, getUser, deleteUser } = require('./utils/redis/users');
-const { roomEmit, basicEmit } = require('./utils/socketIO/emits');
-const socketIOPlugin = require('./plugins/socketIOPlugin');
-const redisPlugin = require('./plugins/redisPlugin');
-const { setTimeout } = require('timers');
-const path = require('path');
-const fs = require('fs');
+const {
+	createRoom,
+	getRoom,
+	updateRoom,
+	deleteRoom,
+} = require("./utils/redis/rooms");
+const { createUser, getUser, deleteUser } = require("./utils/redis/users");
+const { roomEmit, basicEmit } = require("./utils/socketIO/emits");
+const socketIOPlugin = require("./plugins/socketIOPlugin");
+const redisPlugin = require("./plugins/redisPlugin");
+const { setTimeout } = require("timers");
+const path = require("path");
+const fs = require("fs");
 
-const fastify = require('fastify')({ logger: true });
+const fastify = require("fastify")({ logger: true });
 
 const init = async () => {
 	socketIOPlugin(fastify);
@@ -25,69 +30,83 @@ const fire = async () => {
 
 const game = () => {
 	fastify.ready().then(() => {
-		fastify.io.on('connection', (socket) => {
-			socket.on('createRoom', async ({ userName, roomName }) => {
-				const { status, message } = await createRoom(fastify, socket.id, roomName);
+		fastify.io.on("connection", (socket) => {
+			socket.on("createRoom", async ({ userName, roomName }) => {
+				const { status, message } = await createRoom(
+					fastify,
+					socket.id,
+					roomName
+				);
 
 				if (status === 1) {
 					await createUser(fastify, socket.id, userName, roomName);
 
-					basicEmit(fastify, socket.id, 'success', { message });
+					basicEmit(fastify, socket.id, "success", { message });
 				} else {
-					basicEmit(fastify, socket.id, 'failure', { message });
+					basicEmit(fastify, socket.id, "failure", { message });
 				}
 			});
 
-			socket.on('joinRoom', async ({ userName, roomName }) => {
-				const { status, message } = await updateRoom(fastify, 'join', socket.id, roomName);
+			socket.on("joinRoom", async ({ userName, roomName }) => {
+				const { status, message } = await updateRoom(
+					fastify,
+					"join",
+					socket.id,
+					roomName
+				);
 
 				if (status === 1) {
 					await createUser(fastify, socket.id, userName, roomName);
 
-					basicEmit(fastify, socket.id, 'success', { message });
-					setTimeout(async () => await roomEmit(fastify, socket.id, 'gameOn'), 5000);
+					basicEmit(fastify, socket.id, "success", { message });
+					setTimeout(
+						async () => await roomEmit(fastify, socket.id, "gameOn"),
+						5000
+					);
 				} else {
-					basicEmit(fastify, socket.id, 'failure', { message });
+					basicEmit(fastify, socket.id, "failure", { message });
 				}
 			});
 
-			socket.on('posUpdate', async ({ posDiff }) => {
-				await roomEmit(fastify, socket.id, 'posUpdate', { posDiff });
+			socket.on("posUpdate", async ({ posDiff }) => {
+				await roomEmit(fastify, socket.id, "posUpdate", { posDiff });
 			});
 
-			socket.on('leaveRoom', async () => {
+			socket.on("leaveRoom", async () => {
 				const user = await getUser(fastify, socket.id);
 
 				if (user) {
-					await roomEmit(fastify, socket.id, 'gameOff');
+					await roomEmit(fastify, socket.id, "gameOff");
 					await deleteRoom(fastify, user.roomName);
 
-					basicEmit(fastify, socket.id, 'success', { message: 'User left the room' });
+					basicEmit(fastify, socket.id, "success", {
+						message: "User left the room",
+					});
 				} else {
-					basicEmit(fastify, socket.id, 'failure', { message: "User doesn't exist" });
+					basicEmit(fastify, socket.id, "failure", {
+						message: "User doesn't exist",
+					});
 				}
 			});
 
-			socket.on('disconnect', async (reason) => {
+			socket.on("disconnect", async (reason) => {
 				const user = await getUser(fastify, socket.id);
 
 				if (user) {
-					await roomEmit(fastify, socket.id, 'gameOff');
+					await roomEmit(fastify, socket.id, "gameOff");
 					await deleteRoom(fastify, user.roomName);
-
-					basicEmit(fastify, socket.id, 'success', { message: 'User left the room' });
-				} else {
-					basicEmit(fastify, socket.id, 'failure', { message: "User doesn't exist" });
 				}
 			});
 		});
 	});
 };
 
-fastify.get('*', {}, (req, reply) => {
-	const stream = fs.createReadStream(path.join(__dirname, 'client', 'index.html'));
+fastify.get("*", {}, (req, reply) => {
+	const stream = fs.createReadStream(
+		path.join(__dirname, "client", "index.html")
+	);
 
-	reply.type('text/html').send(stream);
+	reply.type("text/html").send(stream);
 });
 
 init();
