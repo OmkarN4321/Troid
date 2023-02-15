@@ -1,11 +1,6 @@
-const {
-	createRoom,
-	getRoom,
-	updateRoom,
-	deleteRoom,
-} = require("./utils/redis/rooms");
+const { createRoom, getRoom, updateRoom, deleteRoom } = require("./utils/redis/rooms");
 const { createUser, getUser, deleteUser } = require("./utils/redis/users");
-const { roomEmit, basicEmit } = require("./utils/socketIO/emits");
+const { roomEmit, basicEmit, roomBroadcastEmit } = require("./utils/socketIO/emits");
 const socketIOPlugin = require("./plugins/socketIOPlugin");
 const redisPlugin = require("./plugins/redisPlugin");
 const { setTimeout } = require("timers");
@@ -17,24 +12,11 @@ const init = async () => {
 	redisPlugin(fastify);
 };
 
-const fire = async () => {
-	try {
-		await fastify.listen({ port: 5000 });
-	} catch (error) {
-		fastify.log.error(error);
-		process.exit(1);
-	}
-};
-
 const game = () => {
 	fastify.ready().then(() => {
 		fastify.io.on("connection", (socket) => {
 			socket.on("createRoom", async ({ userName, roomName }) => {
-				const { status, message } = await createRoom(
-					fastify,
-					socket.id,
-					roomName
-				);
+				const { status, message } = await createRoom(fastify, socket.id, roomName);
 
 				if (status === 1) {
 					await createUser(fastify, socket.id, userName, roomName);
@@ -46,28 +28,25 @@ const game = () => {
 			});
 
 			socket.on("joinRoom", async ({ userName, roomName }) => {
-				const { status, message } = await updateRoom(
-					fastify,
-					"join",
-					socket.id,
-					roomName
-				);
+				const { status, message } = await updateRoom(fastify, "join", socket.id, roomName);
 
 				if (status === 1) {
 					await createUser(fastify, socket.id, userName, roomName);
 
 					basicEmit(fastify, socket.id, "success", { message });
-					setTimeout(
-						async () => await roomEmit(fastify, socket.id, "gameOn"),
-						5000
-					);
+					setTimeout(async () => await roomEmit(fastify, socket.id, "gameOn"), 5000);
 				} else {
 					basicEmit(fastify, socket.id, "failure", { message });
 				}
 			});
 
-			socket.on("posUpdate", async ({ posDiff }) => {
-				await roomEmit(fastify, socket.id, "posUpdate", { posDiff });
+			socket.on("ping", async ({ newPosDiff }) => {
+				await roomEmit(fastify, socket.id, "pong", { newPosDiff });
+			});
+
+			socket.on("kill", async () => {
+				basicEmit(fastify, socket.id, "won");
+				await roomBroadcastEmit(fastify, socket.id, "lost");
 			});
 
 			socket.on("leaveRoom", async () => {
@@ -97,6 +76,15 @@ const game = () => {
 			});
 		});
 	});
+};
+
+const fire = async () => {
+	try {
+		await fastify.listen({ port: 5000 });
+	} catch (error) {
+		fastify.log.error(error);
+		process.exit(1);
+	}
 };
 
 init();
